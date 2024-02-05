@@ -14,22 +14,13 @@ impl<T: Mul<Output = T> + Copy> Matrix<T> {
 
 impl<T: Mul<Output = T>> Index<(usize, usize)> for Matrix<T> {
     type Output = T;
-
     fn index(&self, index: (usize, usize)) -> &T {
-        if index.0 * self.w + index.1 < self.w * self.h {
-            &self.data[index.0 * self.w + index.1]
-        } else {
-            panic!("Out of bounds: {}, max {}", index.0 * self.w + index.1, self.w * self.h);
-        }
+        &self.data[index.0 * self.h + index.1]
     }
 }
 
 impl<T: Mul<Output = T>> IndexMut<(usize, usize)> for Matrix<T> {
     fn index_mut(&mut self, index: (usize, usize)) -> &mut T {
-        if index.0 * self.w + index.1 < self.w * self.h {
-            &mut self.data[index.0 * self.w + index.1]
-        } else {
-            panic!("Out of bounds: {}, max {}", index.0 * self.w + index.1, self.w * self.h);
-        }
+        &mut self.data[index.0 * self.h + index.1]
     }
 }
