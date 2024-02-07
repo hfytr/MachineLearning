@@ -1,2 +1,2 @@
-mod matrix;
 mod nn;
+mod algebra;
