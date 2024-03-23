@@ -1,14 +1,32 @@
 use rand::{distributions::uniform::SampleUniform, Rng};
 use std::{
+    fmt::Display,
     iter::Sum,
     ops::{Add, AddAssign, Index, IndexMut, Mul},
 };
 
-#[derive(Debug, Clone, Default)]
-pub struct Matrix<T: Mul> {
+#[derive(Clone, Default)]
+pub struct Matrix<T> {
     data: Vec<T>,
     w: usize,
     h: usize,
+}
+
+impl<T: Display> Display for Matrix<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Matrix: w: {}, h: {} [\n    ", self.w, self.h)?;
+        for (i, x) in self.data.iter().enumerate() {
+            write!(f, "{}, ", x)?;
+            if (i + 1) % self.w == 0 && i != 0 {
+                writeln!(f)?;
+                if i != self.data.len() - 1 {
+                    write!(f, "    ")?;
+                }
+            }
+        }
+        writeln!(f, "]")?;
+        Ok(())
+    }
 }
 
 impl<T: Mul<Output = T> + Copy> Matrix<T> {
@@ -127,7 +145,7 @@ where
 }
 
 // row major
-impl<T: Mul<Output = T>> Index<(usize, usize)> for Matrix<T> {
+impl<T> Index<(usize, usize)> for Matrix<T> {
     type Output = T;
     fn index(&self, index: (usize, usize)) -> &T {
         assert!(
@@ -142,7 +160,7 @@ impl<T: Mul<Output = T>> Index<(usize, usize)> for Matrix<T> {
     }
 }
 
-impl<T: Mul<Output = T>> IndexMut<(usize, usize)> for Matrix<T> {
+impl<T> IndexMut<(usize, usize)> for Matrix<T> {
     fn index_mut(&mut self, index: (usize, usize)) -> &mut T {
         assert!(
             index.0 * self.w + index.1 < self.data.len(),
@@ -156,7 +174,7 @@ impl<T: Mul<Output = T>> IndexMut<(usize, usize)> for Matrix<T> {
     }
 }
 
-impl<T: Mul<Output = T>> Index<usize> for Matrix<T> {
+impl<T> Index<usize> for Matrix<T> {
     type Output = T;
     fn index(&self, index: usize) -> &T {
         assert!(
@@ -169,7 +187,7 @@ impl<T: Mul<Output = T>> Index<usize> for Matrix<T> {
     }
 }
 
-impl<T: Mul<Output = T>> IndexMut<usize> for Matrix<T> {
+impl<T> IndexMut<usize> for Matrix<T> {
     fn index_mut(&mut self, index: usize) -> &mut T {
         assert!(
             index < self.data.len(),

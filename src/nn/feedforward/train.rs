@@ -8,7 +8,7 @@ impl<A: Activation, C: Cost> FFNet<A, C> {
         for i in 0..x.h() {
             let (case_weight, case_bias) =
                 self.single_case_grad(x.clone_row(i).transpose(), &y.clone_row(i));
-            // println!("weights: {:?}\nbiases: {:?}\n", case_weight, case_bias);
+            // println!("weights: {}\nbiases: {}\n", case_weight, case_bias);
             for i in 0..self.layers.len() {
                 weight_grad[i] =
                     (&weight_grad[i] + &case_weight[i]) * (learning_rate / batch_size as f64);
@@ -42,7 +42,7 @@ impl<A: Activation, C: Cost> FFNet<A, C> {
                 i == 0,
             );
             /*println!(
-                "i: {}\nweights: {:?}\nbiases: {:?}\ncost_wrt_output: {:?}\n",
+                "i: {}\nweights: {}\nbiases: {}\ncost_wrt_output: {}\n",
                 i, weight_grad, bias_grad, cost_wrt_output
             );*/
             weight_grads[i] = weight_grad;
@@ -99,13 +99,13 @@ impl<A: Activation, C: Cost> Layer<A, C> {
         );
 
         println!(
-            "input: {:?}\nunactivated_output: {:?}\ncost_wrt_output: {:?}",
+            "input: {}\nunactivated_output: {}\ncost_wrt_output: {}",
             input, unactivated_output, cost_wrt_output
         );
         let output_wrt_unactivated = unactivated_output.apply(|x| A::prime(x));
-        println!("output_wrt_unactivated: {:?}", output_wrt_unactivated);
+        println!("output_wrt_unactivated: {}", output_wrt_unactivated);
         let mut cost_wrt_unactivated = cost_wrt_output.mul_element_wise(output_wrt_unactivated);
-        println!("cost_wrt_unactivated: {:?}\n", cost_wrt_unactivated);
+        println!("cost_wrt_unactivated: {}\n", cost_wrt_unactivated);
         let weight_grad = &cost_wrt_unactivated * input;
 
         // cost_wrt_input will be passed too next layer as cost_wrt_output, so its unneeded if this
@@ -128,6 +128,6 @@ impl<A: Activation, C: Cost> Layer<A, C> {
     pub fn randomize_params(&mut self) {
         self.weights = Matrix::random(-0.3_f64, 0.3_f64, self.weights.w(), self.weights.h());
         self.biases = Matrix::random(-0.3_f64, 0.3_f64, self.biases.w(), self.biases.h());
-        println!("{:?} {:?}", self.weights, self.biases);
+        println!("{} {}", self.weights, self.biases);
     }
 }

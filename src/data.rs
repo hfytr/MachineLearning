@@ -5,17 +5,13 @@ use std::{
 
 use crate::algebra::Matrix;
 
-pub enum StringEncode {
-    Integer,
-    OneHot,
-}
-
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum DataType {
     Categorical(String),
     Numerical(f64),
 }
 
+#[derive(Debug)]
 pub struct Dataset {
     data: HashMap<String, Vec<DataType>>,
     keys: Vec<String>,
@@ -26,9 +22,20 @@ impl Dataset {
         Matrix::new_from_2d(columns.iter().map(|x| {
             self.data.get(x).unwrap_or_else(|| panic!("failed to get {x}")).iter().map(|y| match y {
                 DataType::Numerical(value) => *value,
-                DataType::Categorical(_) => { panic!("Categorical variables in dataset. Please use Dataset::encode before trying to get a matrix."); }
+                DataType::Categorical(_) => { panic!("Categorical variables in dataset. Please use encode data before trying to get a matrix."); }
             }).collect()
         }).collect(), false)
+    }
+
+    pub fn get_col(&self, col: &str) -> Option<&[DataType]> {
+        Some(self.data.get(col)?)
+    }
+
+    pub fn get_row(&self, row: usize) -> Vec<&DataType> {
+        self.keys()
+            .iter()
+            .map(|x| &self.data.get(x).unwrap()[row])
+            .collect()
     }
 
     pub fn keys(&self) -> &[String] {
@@ -67,87 +74,111 @@ impl Dataset {
         Dataset { data, keys }
     }
 
-    pub fn encode(&mut self, encoding: StringEncode) {
-        let categorical: Vec<&String> = self
-            .keys
-            .iter()
-            .filter(|&x| match self.data.get(x).expect("failed to get {x}")[0] {
-                DataType::Numerical(_) => false,
-                DataType::Categorical(_) => true,
-            })
-            .collect();
-        match encoding {
-            StringEncode::OneHot => {
-                for i in categorical.into_iter() {
-                    let unique: Vec<String> = self.unique_values(i);
-                    for j in unique.into_iter() {
-                        self.data
-                            .insert(j.clone(), self.is_in_category(i.to_string(), j));
-                    }
-                }
-            }
-            StringEncode::Integer => {
-                for i in categorical.into_iter() {
-                    let suffix: &str = " - encoded";
-                    let unique: Vec<String> = self.unique_values(i);
-                    self.data
-                        .insert(i.to_owned() + suffix, self.integer_encode(i, unique));
-                }
-            }
+    pub fn one_hot_encode(&mut self, col: &str, accuracy: i32) -> Vec<String> {
+        let unique: Vec<DataType> = self
+            .unique_values(col, accuracy)
+            .expect("Invalid column name");
+        println!("{:?}", unique);
+        let mut new_keys = Vec::<String>::new();
+        for category in unique.into_iter() {
+            let mut new_col = col.to_string();
+            new_col.push_str(" - ");
+            new_col.push_str(&match category {
+                DataType::Numerical(x) => x.to_string(),
+                DataType::Categorical(ref x) => x.to_string(),
+            });
+            self.data.insert(
+                new_col.clone(),
+                self.is_in_category(col, category)
+                    .expect("Invalid column name"),
+            );
+            new_keys.push(new_col);
         }
+        new_keys
     }
 
-    fn integer_encode(&self, column: &String, unique: Vec<String>) -> Vec<DataType> {
-        let mut unique_hashmap: HashMap<String, usize> = HashMap::new();
-        for i in unique.into_iter().enumerate() {
-            unique_hashmap.insert(i.1, i.0);
-        }
-        self.data
-            .get(column)
-            .expect("failed to get {column}")
-            .to_owned()
-            .iter()
-            .map(|x| {
-                if let DataType::Categorical(y) = x {
-                    DataType::Numerical(*unique_hashmap.get(y).expect("failed to get {y}") as f64)
-                } else {
-                    unreachable!()
-                }
-            })
-            .collect()
-    }
-
-    fn is_in_category(&self, column: String, category: String) -> Vec<DataType> {
-        self.data
-            .get(&column)
-            .expect("failed to get {&column}")
-            .iter()
-            .map(|x| {
-                if let DataType::Categorical(y) = x {
-                    if *y == category {
+    fn is_in_category(&self, col: &str, category: DataType) -> Option<Vec<DataType>> {
+        println!("    cur_col: {}", col);
+        Some(
+            self.data
+                .get(col)?
+                .iter()
+                .map(|x| {
+                    if *x == category {
                         DataType::Numerical(1.0)
                     } else {
                         DataType::Numerical(0.0)
                     }
+                })
+                .collect(),
+        )
+    }
+
+    fn integer_encode(&mut self, col: &String) {
+        let unique: Vec<String> = self
+            .unique_values(col, 0)
+            .unwrap()
+            .into_iter()
+            .map(|x| {
+                if let DataType::Categorical(y) = x {
+                    y
                 } else {
                     unreachable!()
                 }
             })
-            .collect()
+            .collect();
+        let mut unique_hashmap: HashMap<String, usize> = HashMap::new();
+        for i in unique.into_iter().enumerate() {
+            unique_hashmap.insert(i.1, i.0);
+        }
+        col.clone().push_str(" - encoded");
+        self.data.insert(
+            col.to_string(),
+            self.data
+                .get(col)
+                .unwrap()
+                .iter()
+                .map(|x| {
+                    if let DataType::Categorical(y) = x {
+                        DataType::Numerical(
+                            *unique_hashmap.get(y).expect("failed to get {y}") as f64
+                        )
+                    } else {
+                        unreachable!()
+                    }
+                })
+                .collect(),
+        );
     }
 
-    fn unique_values(&self, column: &str) -> Vec<String> {
-        let mut hashset = HashSet::<String>::new();
-        for j in self
-            .data
-            .get(column)
-            .expect("failed to get {column}")
-            .iter()
-        {
-            if let DataType::Categorical(x) = j {
-                hashset.insert(x.to_string());
-            }
+    fn unique_values(&self, col_name: &str, accuracy: i32) -> Option<Vec<DataType>> {
+        let mut unique = HashSet::<String>::new();
+        let col = self.data.get(col_name)?;
+        let is_num = match col[0] {
+            DataType::Categorical(_) => false,
+            DataType::Numerical(_) => true,
+        };
+        for i in col {
+            unique.insert(match i {
+                DataType::Categorical(x) => x.to_string(),
+                DataType::Numerical(x) => Self::string_with_accuracy(*x, accuracy),
+            });
         }
-        Vec::from_iter(hashset)
+        Some(
+            unique
+                .into_iter()
+                .map(|x| {
+                    if is_num {
+                        DataType::Numerical(x.parse().unwrap())
+                    } else {
+                        DataType::Categorical(x)
+                    }
+                })
+                .collect(),
+        )
+    }
+
+    fn string_with_accuracy(x: f64, accuracy: i32) -> String {
+        ((x * 10_f64.powi(accuracy)).round() / 10_f64.powi(accuracy)).to_string()
     }
 }

@@ -34,17 +34,18 @@ mod tests {
     #[test]
     fn training_works() {
         let train_path = String::from("data/mnist_small.csv");
-        let data = Dataset::from_csv(&train_path);
-        let keys: Vec<String> = data
+        let mut data = Dataset::from_csv(&train_path);
+        let y_keys = data.one_hot_encode("label", 1);
+        let x_keys: Vec<String> = data
             .keys()
             .iter()
             .filter(|&value| value != "label")
             .cloned()
             .collect();
-        let x = data.to_matrix(&keys);
-        let y = data.to_matrix(&["label".to_string()]);
-        println!("{:?}", x.w());
-        let mut net: FFNet<ReLU, SumSquared> = FFNet::new(vec![784_usize, 2_usize, 1_usize]);
+        let x = data.to_matrix(&x_keys);
+        let y = data.to_matrix(&y_keys);
+        println!("{}", y);
+        let mut net: FFNet<ReLU, SumSquared> = FFNet::new(vec![784_usize, 2_usize, 10_usize]);
         net.sgd(&x, &y, 4, 0.1);
         panic!();
     }
