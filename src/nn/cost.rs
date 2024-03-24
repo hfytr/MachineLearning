@@ -21,7 +21,7 @@ impl Cost for SumSquared {
                 .map(|(x, y)| 2.0 * (x - y))
                 .collect(),
             1,
-            pred.h(),
+            pred.w(),
         )
     }
 }

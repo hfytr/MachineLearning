@@ -8,15 +8,18 @@ impl<A: Activation, C: Cost> FFNet<A, C> {
         for i in 0..x.h() {
             let (case_weight, case_bias) =
                 self.single_case_grad(x.clone_row(i).transpose(), &y.clone_row(i));
-            // println!("weights: {}\nbiases: {}\n", case_weight, case_bias);
-            for i in 0..self.layers.len() {
-                weight_grad[i] =
-                    (&weight_grad[i] + &case_weight[i]) * (learning_rate / batch_size as f64);
-                bias_grad[i] =
-                    (&bias_grad[i] + &case_bias[i]) * (learning_rate / batch_size as f64);
+            for j in (0..self.layers.len()).rev() {
+                weight_grad[j] =
+                    &weight_grad[j] - &case_weight[j] * (learning_rate / batch_size as f64);
+                bias_grad[j] = &bias_grad[j] - &case_bias[j] * (learning_rate / batch_size as f64);
             }
+            println!("case_weight: {}case_bias: {}", case_weight[1], case_bias[1]);
             if i % batch_size == 0 {
                 self.apply_grad(&weight_grad, &bias_grad);
+                println!(
+                    "weight: {}bias: {}",
+                    self.layers[1].weights, self.layers[1].biases
+                );
                 (weight_grad, bias_grad) = self.init_params();
             }
         }
@@ -27,7 +30,6 @@ impl<A: Activation, C: Cost> FFNet<A, C> {
         input: &Matrix<f64>,
         output: &Matrix<f64>,
     ) -> (Vec<Matrix<f64>>, Vec<Matrix<f64>>) {
-        println!("--CASE--");
         let result = self.pred_single(input.clone());
         let (mut weight_grad, mut bias_grad);
         let mut cost_wrt_output: Matrix<f64> = C::prime(result, output);
@@ -41,10 +43,6 @@ impl<A: Activation, C: Cost> FFNet<A, C> {
                 &cost_wrt_output,
                 i == 0,
             );
-            /*println!(
-                "i: {}\nweights: {}\nbiases: {}\ncost_wrt_output: {}\n",
-                i, weight_grad, bias_grad, cost_wrt_output
-            );*/
             weight_grads[i] = weight_grad;
             bias_grads[i] = bias_grad;
         }
@@ -98,25 +96,23 @@ impl<A: Activation, C: Cost> Layer<A, C> {
             "input len does not match in_shape"
         );
 
-        println!(
-            "input: {}\nunactivated_output: {}\ncost_wrt_output: {}",
-            input, unactivated_output, cost_wrt_output
-        );
         let output_wrt_unactivated = unactivated_output.apply(|x| A::prime(x));
-        println!("output_wrt_unactivated: {}", output_wrt_unactivated);
+        /*println!(
+            "output_wrt_unactivated: {}cost_wrt_output: {}",
+            output_wrt_unactivated, cost_wrt_output
+        );*/
         let mut cost_wrt_unactivated = cost_wrt_output.mul_element_wise(output_wrt_unactivated);
-        println!("cost_wrt_unactivated: {}\n", cost_wrt_unactivated);
         let weight_grad = &cost_wrt_unactivated * input;
 
         // cost_wrt_input will be passed too next layer as cost_wrt_output, so its unneeded if this
         // is the first layer
-        if !is_first_layer {
+        if is_first_layer {
+            (weight_grad, cost_wrt_unactivated, Matrix::<f64>::default())
+        } else {
             let mut cost_wrt_input = cost_wrt_unactivated.transpose() * &self.weights;
             cost_wrt_unactivated.transpose();
             cost_wrt_input.transpose();
             (weight_grad, cost_wrt_unactivated, cost_wrt_input)
-        } else {
-            (weight_grad, cost_wrt_unactivated, Matrix::<f64>::default())
         }
     }
 
@@ -128,6 +124,5 @@ impl<A: Activation, C: Cost> Layer<A, C> {
     pub fn randomize_params(&mut self) {
         self.weights = Matrix::random(-0.3_f64, 0.3_f64, self.weights.w(), self.weights.h());
         self.biases = Matrix::random(-0.3_f64, 0.3_f64, self.biases.w(), self.biases.h());
-        println!("{} {}", self.weights, self.biases);
     }
 }

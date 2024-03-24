@@ -74,13 +74,9 @@ impl Dataset {
         Dataset { data, keys }
     }
 
-    pub fn one_hot_encode(&mut self, col: &str, accuracy: i32) -> Vec<String> {
-        let unique: Vec<DataType> = self
-            .unique_values(col, accuracy)
-            .expect("Invalid column name");
-        println!("{:?}", unique);
+    pub fn one_hot_encode(&mut self, col: &str, categories: &Vec<DataType>) -> Vec<String> {
         let mut new_keys = Vec::<String>::new();
-        for category in unique.into_iter() {
+        for category in categories.iter() {
             let mut new_col = col.to_string();
             new_col.push_str(" - ");
             new_col.push_str(&match category {
@@ -97,14 +93,13 @@ impl Dataset {
         new_keys
     }
 
-    fn is_in_category(&self, col: &str, category: DataType) -> Option<Vec<DataType>> {
-        println!("    cur_col: {}", col);
+    fn is_in_category(&self, col: &str, category: &DataType) -> Option<Vec<DataType>> {
         Some(
             self.data
                 .get(col)?
                 .iter()
                 .map(|x| {
-                    if *x == category {
+                    if x == category {
                         DataType::Numerical(1.0)
                     } else {
                         DataType::Numerical(0.0)

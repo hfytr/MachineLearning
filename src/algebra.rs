@@ -2,7 +2,7 @@ use rand::{distributions::uniform::SampleUniform, Rng};
 use std::{
     fmt::Display,
     iter::Sum,
-    ops::{Add, AddAssign, Index, IndexMut, Mul},
+    ops::{Add, AddAssign, Index, IndexMut, Mul, Sub},
 };
 
 #[derive(Clone, Default)]
@@ -199,17 +199,23 @@ impl<T> IndexMut<usize> for Matrix<T> {
     }
 }
 
+macro_rules! expr {
+    ($e:expr) => {
+        $e
+    };
+}
+
 macro_rules! mat_mat_add {
-    ($type: ty) => {
+    ($type: ty, $name: ident, $op: tt) => {
         type Output = Matrix<T>;
-        fn add(self, rhs: $type) -> Matrix<T> {
+        fn $name(self, rhs: $type) -> Matrix<T> {
             assert_eq!(self.w, rhs.w, "widths do not match");
             assert_eq!(self.h, rhs.h, "heights do not match");
             Matrix::<T>::new(
                 self.data
                     .iter()
                     .zip(rhs.data.iter())
-                    .map(|(x, y)| *x + *y)
+                    .map(|(x, y)| expr!(*x $op *y))
                     .collect(),
                 self.w,
                 self.h,
@@ -311,17 +317,33 @@ where
 }
 
 impl<T: Add<Output = T> + Copy + Mul<Output = T>> Add<Matrix<T>> for Matrix<T> {
-    mat_mat_add!(Matrix<T>);
+    mat_mat_add!(Matrix<T>,add,  +);
 }
 
 impl<T: Add<Output = T> + Copy + Mul<Output = T>> Add<Matrix<T>> for &Matrix<T> {
-    mat_mat_add!(Matrix<T>);
+    mat_mat_add!(Matrix<T>, add, +);
 }
 
 impl<T: Add<Output = T> + Copy + Mul<Output = T>> Add<&Matrix<T>> for Matrix<T> {
-    mat_mat_add!(&Matrix<T>);
+    mat_mat_add!(&Matrix<T>, add, +);
 }
 
 impl<T: Add<Output = T> + Copy + Mul<Output = T>> Add<&Matrix<T>> for &Matrix<T> {
-    mat_mat_add!(&Matrix<T>);
+    mat_mat_add!(&Matrix<T>, add, +);
+}
+
+impl<T: Sub<Output = T> + Copy + Mul<Output = T>> Sub<Matrix<T>> for Matrix<T> {
+    mat_mat_add!(Matrix<T>, sub, -);
+}
+
+impl<T: Sub<Output = T> + Copy + Mul<Output = T>> Sub<Matrix<T>> for &Matrix<T> {
+    mat_mat_add!(Matrix<T>, sub, -);
+}
+
+impl<T: Sub<Output = T> + Copy + Mul<Output = T>> Sub<&Matrix<T>> for Matrix<T> {
+    mat_mat_add!(&Matrix<T>, sub, -);
+}
+
+impl<T: Sub<Output = T> + Copy + Mul<Output = T>> Sub<&Matrix<T>> for &Matrix<T> {
+    mat_mat_add!(&Matrix<T>, sub, -);
 }
