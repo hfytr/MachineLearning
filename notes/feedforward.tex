@@ -1,0 +1,68 @@
+\documentclass[14pt]{extarticle}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{extsizes}
+
+\title{NN Gradients}
+\author{Archim Jhunjhunwala}
+
+\begin{document}
+
+\maketitle
+\section{Goal}
+
+The goal is to efficiently compute the gradient of the cost function - $C$ with respect to the weights and biases of a neural networks - $W^l_{i,j}$ denoting the weight from node $j$ in layer $l-1$ to node $i$ in layer $l$. This piece concerns only feed-forward neural networks. Each layer has an activation function $f_l(x)$, as well as the activated $a^l_i$ and unactivated $u^l_i$ values associated with each node $i$.
+
+\section{Single Weights / Biases}
+
+Ignoring matrices, let's find $\frac{\partial C}{\partial b^l_{i}}$, and $\frac{\partial C}{\partial W^l_{i,j}}$ for some layer $l$ in our network of $L$ layers.
+\subsection{Bias Gradient}
+\begin{flushleft}
+    
+    $\frac{\partial C}{\partial b^l_i}=\frac{\partial C}{\partial u^l_i}\frac{\partial u^l_i}{\partial b_i^l}=\frac{\partial C}{\partial a^l_i}\frac{\partial a^l_i}{\partial u^l_i}\frac{\partial u^l_i}{\partial b^l_i}$ by the chain rule
+
+    $\frac{\partial a^l_i}{\partial u^l_i}=\frac{\partial}{\partial u^l_i}f(u^l_i)=f'(u^l_i)$
+    
+    $\frac{\partial u^l_i}{\partial b^l_i}=\frac{\partial}{\partial b^l_i}(b^l_i+...)=1$
+    
+    $\frac{\partial C}{\partial b^l_i}=\frac{\partial C}{\partial a^l_i}f'(u^l_i)$
+    
+\end{flushleft}
+\subsection{Weight Gradient}
+\begin{flushleft}
+   
+    $\frac{\partial C}{\partial W^l_{i,j}}=\frac{\partial C}{\partial u^l_i}\frac{\partial u^l_i}{\partial W^l_{i,j}}=\frac{\partial C}{\partial a^l_i}\frac{\partial a^l_i}{\partial u^l_i}\frac{\partial u^l_i}{\partial W^l_{i,j}}$ by the chain rule
+
+    $\frac{\partial u^l_i}{\partial W^l_{i,j}}=\frac{\partial}{\partial W^l_{i,j}}(W^l_{i,j}a_{l-1,j}+...)=a^{l-1}_j$
+    
+    $\frac{\partial C}{\partial W^l_{i,j}}=\frac{\partial C}{\partial a^l_i}f'(u^l_i)a^{l-1}_j$
+ 
+\end{flushleft}
+\subsection{Backpropagation}
+\begin{flushleft}
+
+We must find 2 more values before we are done: $\frac{\partial C}{\partial a^L_i}$ (this value depends on the specific cost function used, and I will ignore it here). $\frac{\partial C}{\partial a^{l-1}_i}$ as an expression of  $\frac{\partial C}{\partial a^l_i}$. In this way, we can propagate backwards through the network calculating all the necessary gradients.
+
+$\frac{\partial C}{\partial a^{l-1}_i}=\sum_{j=1}^n\frac{\partial C}{\partial u^l_j}\frac{\partial u^l_j}{\partial a^{l-1}_i}=\sum_{j=1}^n\frac{\partial C}{\partial a^l_j}\frac{\partial a^l_j}{\partial u^l_j}\frac{\partial u^l_j}{\partial a^{l-1}_i}$ by the chain rule ($n$ is the number of nodes in layer $l$)
+
+$\frac{\partial u^l_j}{\partial a^{l-1}_i}=\frac{\partial}{\partial a^{l-1}_i}(W^l_{j,i}a^{l-1}_i+...)=W^l_{j,i}$
+
+$\frac{\partial C}{\partial a^{l-1}_i}=\sum_{j=1}^n\frac{\partial C}{\partial a^l_j}f'(u^l_j)W^l_{j,i}$
+
+Observe that the bias gradient is present in both the weight gradient, and the derivative cost with respect to the previous layers nodes.
+    
+\end{flushleft}
+\pagebreak
+\section{Results / Matrix Notation}
+\begin{flushleft}
+$\frac{\partial C}{\partial b^l}=\begin{bmatrix}
+    \frac{\partial C}{\partial a^l_1}f'(u^l_1) \\
+    ...\\
+    \frac{\partial C}{\partial a^l_n}f'(u^l_n)
+\end{bmatrix}$
+
+$\frac{\partial C}{\partial W^l_{i,j}}=\frac{\partial C}{\partial b^l}(a^{l-1})^T$
+
+$\frac{\partial C}{\partial a^{l-1}_i}=\frac{\partial C}{\partial b^l}^TW^l$ (this will be a row vector)
+\end{flushleft}
+\end{document}

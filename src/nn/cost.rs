@@ -1,4 +1,5 @@
-use crate::algebra::Matrix;
+use crate::algebra::{MatLike, Matrix};
+use std::iter::zip;
 
 pub trait Cost {
     fn calc(pred: &Matrix<f64>, actual: &Matrix<f64>) -> f64;
@@ -16,8 +17,7 @@ impl Cost for SumSquared {
 
     fn prime(pred: &Matrix<f64>, actual: &Matrix<f64>) -> Matrix<f64> {
         Matrix::new(
-            pred.iter()
-                .zip(actual.iter())
+            zip(pred.iter(), actual.iter())
                 .map(|(x, y)| 2.0 * (x - y))
                 .collect(),
             1,

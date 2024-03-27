@@ -1,5 +1,5 @@
 use super::{Activation, Cost, FFNet, Layer};
-use crate::algebra::Matrix;
+use crate::algebra::{MatLike, Matrix};
 
 impl<A: Activation, C: Cost> FFNet<A, C> {
     pub fn sgd(&mut self, x: &Matrix<f64>, y: &Matrix<f64>, batch_size: usize, learning_rate: f64) {
@@ -13,14 +13,10 @@ impl<A: Activation, C: Cost> FFNet<A, C> {
                     &weight_grad[j] - &case_weight[j] * (learning_rate / batch_size as f64);
                 bias_grad[j] = &bias_grad[j] - &case_bias[j] * (learning_rate / batch_size as f64);
             }
-            println!("case_weight: {}case_bias: {}", case_weight[1], case_bias[1]);
             if i % batch_size == 0 {
                 self.apply_grad(&weight_grad, &bias_grad);
-                println!(
-                    "weight: {}bias: {}",
-                    self.layers[1].weights, self.layers[1].biases
-                );
                 (weight_grad, bias_grad) = self.init_params();
+                println!("grad applied");
             }
         }
     }
@@ -97,10 +93,6 @@ impl<A: Activation, C: Cost> Layer<A, C> {
         );
 
         let output_wrt_unactivated = unactivated_output.apply(|x| A::prime(x));
-        /*println!(
-            "output_wrt_unactivated: {}cost_wrt_output: {}",
-            output_wrt_unactivated, cost_wrt_output
-        );*/
         let mut cost_wrt_unactivated = cost_wrt_output.mul_element_wise(output_wrt_unactivated);
         let weight_grad = &cost_wrt_unactivated * input;
 
